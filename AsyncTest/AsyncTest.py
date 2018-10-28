@@ -77,34 +77,41 @@ def main():
 			else:
 				print('...thinking about it')
 				robotState = 'Leaving charger'
+
 		elif robotState == 'Move along':
 			if isMoving:
 				print('...move along')
 				robotState = 'Move along'
 			else:
 				robotState = 'Scared'
+
 		elif robotState == 'Scared':
 			print('Nah, going home')
 			robot.behavior.drive_on_charger()
 			robotState = 'I wanna go home'
+
 		elif robotState == 'I wanna go home':
 			if isMoving:
 				robotState = 'Run away'
 			else:
 				print('...thinking about it')
 				robotState = 'I wanna go home'
+
 		elif robotState == 'Run away':
 			if not(isOnCharger):
 				print('...going home')
 				robotState = 'Run away'
 			else:
 				robotState = 'Home sweet home'
+
 		elif robotState == 'Home sweet home':
 			print('Time for a nap.')
 			robotState = 'Nap time'
+
 		elif robotState == 'Nap time':
 			print('snore...')
 			robotState = 'Nap time'
+
 		else:
 			print('Uh oh, this is a bad state.')			
 			print('Human assistance is needed.')			
