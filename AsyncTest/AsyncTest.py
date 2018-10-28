@@ -1,4 +1,5 @@
 # AsyncRobot and Event Handling example
+# along with a simple state machine
 # by RoboJay.us
 
 import anki_vector
@@ -36,8 +37,10 @@ IS_BATTERY_OVERHEATED   = 0x40000
 
 # Event handler for observed objects
 def on_robot_observed_object(event, info):
-	print('I saw something!')
+	print()
+	print('I see something!')
 	print(info)
+	print()
 
 # Main processing code
 def main():
@@ -54,20 +57,60 @@ def main():
 	print('Running away')
 	robot.behavior.drive_off_charger()
 
-	onMyWayBackToCharger = False
+	robotState = 'Leaving charger'
 
 	# watch how the robot moves around while the code here is counting
 	for i in range(0,30):
+		# print a counter
 		print(i)
-		time.sleep(1)
 
-		# check our motion status, if we're not moving, go back to charger
-		if (robot.status & IS_MOVING):
-			print('...move along...')
-		elif not(onMyWayBackToCharger):
+		# check our motion status
+		isMoving = (robot.status & IS_MOVING) == IS_MOVING
+		isOnCharger = (robot.status & IS_ON_CHARGER) == IS_ON_CHARGER
+
+		# simple state machine
+		# this runs every time the loop executes
+
+		if robotState == 'Leaving charger':
+			if isMoving:
+				robotState = 'Move along'
+			else:
+				print('...thinking about it')
+				robotState = 'Leaving charger'
+		elif robotState == 'Move along':
+			if isMoving:
+				print('...move along')
+				robotState = 'Move along'
+			else:
+				robotState = 'Scared'
+		elif robotState == 'Scared':
 			print('Nah, going home')
 			robot.behavior.drive_on_charger()
-			onMyWayBackToCharger = True
+			robotState = 'I wanna go home'
+		elif robotState == 'I wanna go home':
+			if isMoving:
+				robotState = 'Run away'
+			else:
+				print('...thinking about it')
+				robotState = 'I wanna go home'
+		elif robotState == 'Run away':
+			if not(isOnCharger):
+				print('...going home')
+				robotState = 'Run away'
+			else:
+				robotState = 'Home sweet home'
+		elif robotState == 'Home sweet home':
+			print('Time for a nap.')
+			robotState = 'Nap time'
+		elif robotState == 'Nap time':
+			print('snore...')
+			robotState = 'Nap time'
+		else:
+			print('Uh oh, this is a bad state.')			
+			print('Human assistance is needed.')			
+
+		# the loop executes every second
+		time.sleep(1)
 
 	#clean up
 	robot.disconnect()
