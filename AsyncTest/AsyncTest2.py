@@ -69,33 +69,19 @@ def main():
 		# this runs every time the loop executes
 
 		if robotState == 'Leaving charger':
-			if isMoving:
-				robotState = 'Move along'
-			else:
-				print('...thinking about it')
-				robotState = 'Leaving charger'
-
-		elif robotState == 'Move along':
-			if isMoving:
-				print('...move along')
-				robotState = 'Move along'
-			else:
+			if action.done():
 				robotState = 'Scared'
+			else:
+				print('...leaving')
+				robotState = 'Leaving charger'
 
 		elif robotState == 'Scared':
 			print('Nah, going home')
-			robot.behavior.drive_on_charger()
-			robotState = 'I wanna go home'
-
-		elif robotState == 'I wanna go home':
-			if isMoving:
-				robotState = 'Run away'
-			else:
-				print('...thinking about it')
-				robotState = 'I wanna go home'
+			action = robot.behavior.drive_on_charger()
+			robotState = 'Run away'
 
 		elif robotState == 'Run away':
-			if not(isOnCharger):
+			if not(action.done()) and not(isOnCharger):
 				print('...going home')
 				robotState = 'Run away'
 			else:
