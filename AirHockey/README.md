@@ -10,3 +10,7 @@ Vector's cube is placed on top of the goal.
 
 An earlier version of code was used for this video:
 https://youtu.be/hV9BDSjeDY4
+
+Please note:  There are a bunch of parameters specific to the 
+air hockey puck and table I was working with.  You'll most
+likely need to make changes...
