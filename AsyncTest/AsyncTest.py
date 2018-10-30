@@ -48,6 +48,14 @@ def main():
 	robot.connect()
 	time.sleep(1)
 
+
+	isOnCharger = (robot.status & IS_ON_CHARGER) == IS_ON_CHARGER
+	if not(isOnCharger):
+		print('Vector needs to start on the charger')
+		print('Put him there and re-run the program...')
+		robot.disconnect()
+		exit()
+
 	# subscribe to observed object events
 	robot.events.subscribe(on_robot_observed_object, Events.robot_observed_object)
 
