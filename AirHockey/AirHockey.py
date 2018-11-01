@@ -235,10 +235,22 @@ def allDone(robot: anki_vector.Robot):
 class StateMachine:
 	stateMachineTimer = 0
 	lastPuckId = 0
-	action = None
+	actionList = []
+	ScanAngles = [0, -30, 30, -60, 60, -90, 90, -120, 120, -150, 150, 180]
+	scanAngleIndex = 0
 
 	def __init__(self, robot: anki_vector.Robot):
 		self.robot = robot
+
+	def actionsDone(self):
+		done = True
+		for i in self.actionList:
+			if not(i.done()):
+				done = False
+		return done
+
+	def action(self, b):
+		self.actionList.append(b)
 
 	# State machine that performs all the heavy logic
 	def nextState(self, state: str):
@@ -255,14 +267,14 @@ class StateMachine:
 
 		if state == 'Start':
 			# get off the charger
-			self.action = robot.behavior.drive_off_charger()
+			self.action(robot.behavior.drive_off_charger())
 			nextState = 'LeavingCharger'
 		
 		elif state == 'LeavingCharger':
-			if self.action.done():				
+			if self.actionsDone():				
 				# make sure we can see properly
-				robot.behavior.set_head_angle(HeadTilt)
-				robot.behavior.set_lift_height(DriveHeight)
+				self.action(robot.behavior.set_head_angle(HeadTilt))
+				self.action(robot.behavior.set_lift_height(DriveHeight))
 				# set the timer for 5 seconds
 				# this gives the camera exposure time to settle
 				self.stateMachineTimer = 5000 / MainLoopDelay
@@ -275,7 +287,7 @@ class StateMachine:
 			if (self.stateMachineTimer <= 0):
 				self.lastPuckId = 0
 				# time has elapsed, camera should be ok
-				self.stateMachineTimer = 5000 / MainLoopDelay
+				self.stateMachineTimer = 1000 / MainLoopDelay
 				nextState = 'LookForPuck'
 			else:
 				nextState = 'CameraDelay'
@@ -313,21 +325,29 @@ class StateMachine:
 			if puck.found:
 				nextState = 'GoToPuck'
 			else:
-				if not(isMoving) and self.action.done():
-					self.action = robot.behavior.turn_in_place(angle=anki_vector.util.degrees(-30.0), speed=anki_vector.util.degrees(30.0))
+				if not(isMoving) and self.actionsDone():
+					self.scanAngleIndex += 1
+					if (self.scanAngleIndex == len(self.ScanAngles)):
+						self.scanAngleIndex = 0
+					self.action(robot.behavior.turn_in_place(angle=anki_vector.util.degrees(self.ScanAngles[self.scanAngleIndex]), 
+						speed=anki_vector.util.degrees(60.0),
+						is_absolute=True))
 				nextState = 'ScanForPuck'
 
 		elif state == 'GrabPuck':
 			if isMoving:
 				nextState = 'GrabPuck'
 			else:
-				pose = anki_vector.util.Pose(x=1350.0, y=0.0, z=0.0, angle_z=anki_vector.util.Angle(degrees=0.0))
-				robot.behavior.set_head_angle(GoalTilt)
-				self.action = robot.behavior.go_to_pose(pose)
-				nextState = 'HeadingDownRink'
+				if not(puck.found):
+					nextState = 'LookForPuck'
+				else:
+					pose = anki_vector.util.Pose(x=1350.0, y=0.0, z=0.0, angle_z=anki_vector.util.Angle(degrees=0.0))
+					self.action(robot.behavior.set_head_angle(GoalTilt))
+					self.action(robot.behavior.go_to_pose(pose))
+					nextState = 'HeadingDownRink'
 
 		elif state == 'HeadingDownRink':
-			if self.action.done():
+			if self.actionsDone():
 				# clear the goal flag
 				goal.found = False
 				nextState = 'LookForGoal'
@@ -337,34 +357,34 @@ class StateMachine:
 		elif state == 'LookForGoal':
 			if goal.found:
 				scoreDistance = anki_vector.util.Distance(distance_mm = abs(goal.pose.x - robot.pose.position.x - GoalOffsetX))
-				self.action = robot.behavior.drive_straight(scoreDistance, ScoreSpeed)
+				self.action(robot.behavior.drive_straight(scoreDistance, ScoreSpeed))
 				nextState = 'Score'
 			else:
 				nextState = 'LookForGoal'
 
 		elif state == 'Score':
-			if self.action.done():
+			if self.actionsDone():
 				nextState = 'BackAway'
 			else:
 				nextState = 'Score'
 
 		elif state == 'BackAway':
-			self.action = robot.behavior.drive_straight(ClearDistance, GrabSpeed)
+			self.action(robot.behavior.drive_straight(ClearDistance, GrabSpeed))
 			nextState = 'BackingAway'
 
 		elif state == 'BackingAway':
-			if self.action.done():
+			if self.actionsDone():
 				nextState = 'GoHome'
 			else:
 				nextState = 'BackingAway'
 
 		elif state == 'GoHome':
 			pose = anki_vector.util.Pose(x=200.0, y=0.0, z=0.0, angle_z=anki_vector.util.Angle(degrees=0.0))
-			self.action = robot.behavior.go_to_pose(pose)
+			self.action(robot.behavior.go_to_pose(pose))
 			nextState = 'HeadingHome'
 
 		elif state == 'HeadingHome':
-			if self.action.done():
+			if self.actionsDone():
 				nextState = 'Done'
 			else:
 				nextState = 'HeadingHome'
